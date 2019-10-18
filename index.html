@@ -1,0 +1,221 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<style>
+			html, body {
+				position: relative;
+				margin: 0;
+				width: 100%;
+				height: 100%;
+			}
+
+			#timerWrap {
+				position: absolute;
+				width: 100%;
+				top: 92%;
+				left: 50%;
+				transform: translateX(-50%) translateY(-50%);
+
+				text-align: center;
+				font-size: 40px;
+				pointer-events: none;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+
+		<div id="timerWrap">
+			<span id="timerLeft"></span> / <span id="timerTotal"></span>
+		</div>
+
+		<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+
+		<script>
+			(function () {
+
+				const MAX_SECONDS = 60 * 30;
+				const DEFAULT_SECONDS = 60 * 5;
+
+				const DEG_TO_RAD = (Math.PI * 2) / 360;
+
+				let width = 0,
+					height = 0;
+
+				let timerLeftEl = null,
+					timerTotalEl = null;
+
+				let stage = null;
+
+				let clockBg = null,
+					clockFg = null,
+					clockRadius = 0,
+					clockAngle = 0;
+
+				let timerTotal = 1000 * DEFAULT_SECONDS,
+					timerLeft = timerTotal,
+					timerStart = null,
+					timerPercentage = 0;
+
+				let draw = true;
+
+				let stageMouseDown = null,
+					stageDragging = false;
+
+				function init () {
+					timerLeftEl = document.querySelector("#timerLeft");
+					timerTotalEl = document.querySelector("#timerTotal");
+
+					stage = new createjs.Stage("canvas");
+					createjs.Touch.enable(stage);
+
+					clockBg = new createjs.Shape();
+					clockFg = new createjs.Shape();
+
+					stage.addChild(clockBg);
+					stage.addChild(clockFg);
+
+					resize();
+					updateClockAngle();
+
+					window.addEventListener("resize", resize);
+
+					createjs.Ticker.timingMode = createjs.Ticker.RAF;
+					createjs.Ticker.addEventListener("tick", handleTick);
+
+					stage.addEventListener("stagemousedown", handleStageMouseDown);
+					stage.addEventListener("stagemousemove", handleStageMouseMove);
+					window.addEventListener("click", handleStageMouseClick);
+					window.addEventListener("touchend", handleStageMouseClick);
+				}
+
+				function updateClockAngle () {
+					timerPercentage = timerTotal > 0 ? 1 - (timerLeft / timerTotal) : 0;
+					clockAngle = timerPercentage * 360;
+
+					renderClock();
+					render(true);
+				}
+
+				function startTimer () {
+					timerStart = Date.now();
+				}
+
+				function resize () {
+					width = window.innerWidth;
+					height = window.innerHeight;
+
+					stage.canvas.width = width;
+					stage.canvas.height = height;
+
+					clockRadius = (Math.min(width, height) * 2 / 3) / 2;
+
+					clockBg.graphics
+						.clear()
+						.setStrokeStyle(1)
+						.beginStroke("#000")
+						.beginFill("#0f0")
+						.drawCircle(0, 0, clockRadius);
+
+					renderClock();
+
+					clockBg.x = clockFg.x = width / 2;
+					clockBg.y = clockFg.y = height / 2;
+
+					render(true);
+
+					updateEls();
+				}
+
+				function renderClock () {
+					clockFg.graphics
+						.clear()
+						.setStrokeStyle(1)
+						.beginStroke("#000")
+						.beginFill(timerLeft > 0 ? "#ff9a00" : "#f00")
+						.moveTo(0, 0)
+						.lineTo(0, -clockRadius)
+						.arc(0, 0, clockRadius, -90 * DEG_TO_RAD, (clockAngle - 90) * DEG_TO_RAD)
+						.lineTo(0, 0);
+				}
+
+				function handleTick (event) {
+					if (timerStart !== null) {
+						timerLeft = Math.max(timerTotal - (Date.now() - timerStart), 0);
+						updateEls();
+
+						updateClockAngle();
+
+						if (timerLeft === 0) {
+							timerStart = null;
+						}
+					}
+				}
+
+				function render (forceDraw = false) {
+					if (draw || forceDraw) {
+						stage.update();
+						draw = false;
+					}
+				}
+
+				function handleStageMouseDown (event) {
+					stageDragging = false;
+					stageMouseDown = event.stageY;
+					timerStart = null;
+					timerLeft = 0;
+				}
+
+				function handleStageMouseMove (event) {
+					let delta = stageMouseDown - event.stageY;
+
+					if (stageMouseDown !== null && delta >= 10) {
+						stageDragging = true;
+						let percentage = delta / window.innerHeight;
+
+						timerTotal = Math.max(Math.ceil(percentage * (MAX_SECONDS / 60)) * 60 * 1000, 0);
+
+						updateEls();
+					}
+				}
+
+				function handleStageMouseClick () {
+					stageMouseDown = null;
+
+					if (!stageDragging) {
+						stageDragging = false;
+						startTimer();
+					}
+				}
+
+				function updateEls () {
+					let leftSec = Math.ceil((timerLeft / 1000) % 60),
+						leftMin = Math.floor(timerLeft / (60 * 1000)),
+						totalSec = Math.ceil((timerTotal / 1000) % 60),
+						totalMin = Math.floor(timerTotal / (60 * 1000));
+
+					if (leftSec === 60) {
+						leftSec = 0;
+						leftMin++;
+					}
+
+					if (totalSec === 60) {
+						totalSec = 0;
+						totalMin++;
+					}
+
+					leftSec = leftSec.toFixed(0);
+					leftMin = leftMin.toFixed(0);
+					totalSec = totalSec.toFixed(0);
+					totalMin = totalMin.toFixed(0);
+
+					timerLeftEl.innerText = leftMin + ":" + (leftSec.length === 1 ? "0" : "") + leftSec;
+					timerTotalEl.innerText = totalMin + ":" + (totalSec.length === 1 ? "0" : "") + totalSec;
+				}
+
+				window.addEventListener("DOMContentLoaded", init);
+
+			})();
+		</script>
+	</body>
+</html>
