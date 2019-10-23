@@ -142,7 +142,7 @@
 				function startTimer () {
 					timerStart = Date.now();
 
-					playSound("ticktock", true);
+					playSound("ticktock", false);
 					playSound("cuckoo", false);
 				}
 
@@ -190,6 +190,10 @@
 						updateEls();
 
 						updateClockAngle();
+
+						if (timerLeft <= 60 * 1000 && ticktockSound.playState === createjs.Sound.PLAY_FINISHED) {
+							playSound("ticktock", true);
+						}
 
 						if (timerLeft === 0) {
 							timerStart = null;
