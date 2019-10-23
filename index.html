@@ -9,7 +9,7 @@
 				height: 100%;
 			}
 
-			#timerWrap {
+			#caption {
 				position: absolute;
 				width: 100%;
 				top: 92%;
@@ -20,13 +20,26 @@
 				font-size: 40px;
 				pointer-events: none;
 			}
+
+			#loadingWrap,
+			#timerWrap {
+				display: none;
+			}
+
+			#caption[data-state="loading"] #loadingWrap,
+			#caption[data-state="timer"] #timerWrap {
+				display: block;
+			}
 		</style>
 	</head>
 	<body>
 		<canvas id="canvas"></canvas>
 
-		<div id="timerWrap">
-			<span id="timerLeft"></span> / <span id="timerTotal"></span>
+		<div id="caption" data-state="loading">
+			<div id="loadingWrap">Loading...</div>
+			<div id="timerWrap">
+				<span id="timerLeft"></span> / <span id="timerTotal"></span>
+			</div>
 		</div>
 
 		<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
@@ -42,7 +55,8 @@
 				let width = 0,
 					height = 0;
 
-				let timerLeftEl = null,
+				let captionEl = null,
+					timerLeftEl = null,
 					timerTotalEl = null;
 
 				let stage = null;
@@ -63,11 +77,14 @@
 					stageDragging = false;
 
 				let ticktockSound = null,
-					cuckooSound = null;
+					cuckooSound = null,
+					ticktockSoundLoaded = false,
+					cuckooSoundLoaded = false;
 
 				function init () {
 					loadAssets();
 
+					captionEl = document.querySelector("#caption");
 					timerLeftEl = document.querySelector("#timerLeft");
 					timerTotalEl = document.querySelector("#timerTotal");
 
@@ -95,6 +112,15 @@
 				}
 
 				function loadAssets () {
+					createjs.Sound.on("fileload", event => {
+						if (event.id === "ticktock") { ticktockSoundLoaded = true; }
+						if (event.id === "cuckoo") { cuckooSoundLoaded = true; }
+
+						if (ticktockSoundLoaded && cuckooSoundLoaded) {
+							captionEl.setAttribute("data-state", "timer");
+						}
+					});
+
 					// https://freesound.org/people/Tetrisrocker/sounds/458627/
 					createjs.Sound.registerSound("458627__tetrisrocker__clock.wav", "ticktock");
 
