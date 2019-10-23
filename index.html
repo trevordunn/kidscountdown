@@ -62,7 +62,12 @@
 				let stageMouseDown = null,
 					stageDragging = false;
 
+				let ticktockSound = null,
+					cuckooSound = null;
+
 				function init () {
+					loadAssets();
+
 					timerLeftEl = document.querySelector("#timerLeft");
 					timerTotalEl = document.querySelector("#timerTotal");
 
@@ -89,6 +94,17 @@
 					window.addEventListener("touchend", handleStageMouseClick);
 				}
 
+				function loadAssets () {
+					// https://freesound.org/people/Tetrisrocker/sounds/458627/
+					createjs.Sound.registerSound("458627__tetrisrocker__clock.wav", "ticktock");
+
+					// https://freesound.org/people/Dean-Raule_DiArchangeli/sounds/128177/
+					createjs.Sound.registerSound("128177__dean-raule-diarchangeli__cuckoo-clock.wav", "cuckoo");
+
+					ticktockSound = createjs.Sound.createInstance("ticktock");
+					cuckooSound = createjs.Sound.createInstance("cuckoo");
+				}
+
 				function updateClockAngle () {
 					timerPercentage = timerTotal > 0 ? 1 - (timerLeft / timerTotal) : 0;
 					clockAngle = timerPercentage * 360;
@@ -99,6 +115,9 @@
 
 				function startTimer () {
 					timerStart = Date.now();
+
+					playSound("ticktock", true);
+					playSound("cuckoo", false);
 				}
 
 				function resize () {
@@ -148,6 +167,9 @@
 
 						if (timerLeft === 0) {
 							timerStart = null;
+
+							playSound("ticktock", false);
+							playSound("cuckoo", true);
 						}
 					}
 				}
@@ -164,6 +186,9 @@
 					stageMouseDown = event.stageY;
 					timerStart = null;
 					timerLeft = 0;
+
+					playSound("ticktock", false);
+					playSound("cuckoo", false);
 				}
 
 				function handleStageMouseMove (event) {
@@ -211,6 +236,22 @@
 
 					timerLeftEl.innerText = leftMin + ":" + (leftSec.length === 1 ? "0" : "") + leftSec;
 					timerTotalEl.innerText = totalMin + ":" + (totalSec.length === 1 ? "0" : "") + totalSec;
+				}
+
+				function playSound (id, play) {
+					if (id === "ticktock") {
+							ticktockSound.stop();
+
+						if (play) {
+							ticktockSound.play({ loop: -1 });
+						}
+					} else if (id === "cuckoo") {
+						cuckooSound.stop();
+
+						if (play) {
+							cuckooSound.play();
+						}
+					}
 				}
 
 				window.addEventListener("DOMContentLoaded", init);
